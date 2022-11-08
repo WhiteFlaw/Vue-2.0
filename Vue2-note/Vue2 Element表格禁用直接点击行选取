@@ -13,3 +13,36 @@ handleSelectChange(selection) { // 存储全部选中项到data
 
 有做行禁选取的需求, 看到有使用selectable完成的, 但是只能禁用手动勾选选取框进行的选取, 并不能阻止基于row-click进行的选取.
 需求是当行数据对象中`crTotAmt`和`drTotAmt`不等时该行禁选, 那么在row-click事件处理函数起始进行对两值的判定, 不符合条件则直接`return false`, 配合`selectable`使用达到彻底禁选的目的.
+
+```javascript
+selectHandle(row) {
+  if (this.idf === 'N') { // 禁止以上人员操作
+    return false
+  }
+  if (row.crTotAmt !== row.drTotAmt) { // 禁选借贷不平衡
+    return false
+  }
+  if (row.editUserId !== this.usrId) { // 禁止操作他人数据
+    return false
+  }
+  return true // 全满足一定记得返true
+},
+
+rowClick(row) { // 事件: 单选
+  if (this.idf === 'N') { // 禁止以上人员操作
+    return false
+  }
+  if (row.crTotAmt !== row.drTotAmt) { // 禁选借贷不平衡
+    return false
+  }
+  if (row.editUserId !== this.usrId) { // 禁止操作他人数据
+    return false
+  }
+  this.$refs.tableEBEC400U.toggleRowSelection(row)
+  const temObj = {
+    evidNo: row.evidNo,
+    drTotAmt: this.numberToCurrencyNo(row.drTotAmt)
+  }
+  this.resDisplayRawParams = temObj
+},
+```
