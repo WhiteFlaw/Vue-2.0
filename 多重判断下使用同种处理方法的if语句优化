@@ -1,0 +1,45 @@
+# if优化
+
+## 原if语句
+```javascript
+const userId = this.getUsrId()
+if (userId === '32100122' ||
+userId === '32100002' ||
+userId === '32100121' ||
+userId === '32100753' ||
+userId === '32072380' ||
+userId === '32089342' ||
+userId === '32100003' ||
+userId === '32000359' ||
+userId === '32100775' ||
+userId === '32500122' ||
+userId === '32100363' ||
+userId === '32100948' ||
+) {
+  // xxx
+}
+```
+
+## 基于switch优化:
+同种处理方法的条件可以相邻书写, 共用处理方法.
+```javascript
+checkIdf() {
+  switch (this.getUsrId()) {
+    case '32100122':
+    case '32100002':
+    case '32100121':
+    case '32100753':
+    case '32072380':
+    case '32089342':
+    case '32100003':
+    case '32000359':
+    case '32100775':
+    case '32500122':
+    case '32100363':
+    case '32100948':
+      break
+    default:
+      this.idf = 'Y'
+  }
+},
+```
