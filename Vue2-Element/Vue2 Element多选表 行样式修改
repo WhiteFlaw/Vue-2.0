@@ -1,0 +1,19 @@
+# Element多选表 行样式修改
+
+```html
+<el-table
+   :data="billData"
+   :cell-class-name="tableCellStyle"
+   @selection-change="handleSelectChange"
+>
+```
+
+```javascript
+tableCellStyle({row}) { // 必需{}
+  if (row.crTotAmt !== row.drTotAmt) { // 禁选借贷不平衡
+    return 'red-cell'
+  } else {
+    return ''
+  }
+}
+```
