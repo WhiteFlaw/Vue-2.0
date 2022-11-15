@@ -200,7 +200,23 @@ export function cloneVNode (vnode: VNode): VNode {
 
 # 三、创建Virtual Node
 ## 3.1 Vue.prototype._render
+```javascript
+const vm = {
+  $options: {
+    render: '1',
+    c: "3",
+    _parentVnode: 2,
+    d: ''
+  }
+}
+const { render, _parentVnode, somea } = vm.$options
+console.log(render) // 1
+console.log(_parentVnode) // 2
+console.log(somea) // undefined
+```
+
 `src/core/instance/render.js`
+
 ```javascript
 Vue.prototype._render = function (): VNode {
   const vm: Component = this
