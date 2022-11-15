@@ -159,6 +159,8 @@ export const createEmptyVNode = (text: string = '') => {
 }
 ```
 
+---
+
 ### 2.3.2 文本节点
 
 ```javascript
@@ -166,6 +168,8 @@ export function createTextVNode (val: string | number) {
   return new VNode(undefined, undefined, undefined, String(val))
 }
 ```
+
+---
 
 ### 2.3.3 克隆节点?
 复制一个已经存在的节点, 在编译时起到优化作用.
@@ -197,6 +201,8 @@ export function cloneVNode (vnode: VNode): VNode {
   return cloned
 }
 ```
+
+---
 
 # 三、创建Virtual Node
 ## 3.1 Vue.prototype._render
@@ -260,6 +266,8 @@ Vue.prototype._render = function (): VNode {
 }
 ```
 
+---
+
 ## 3.2  Vue.prototype._init
 `Vue.prototype._render`中
 ```javascript
@@ -291,7 +299,7 @@ Vue.prototype._init = function (options?: Object) {
 `src\core\instance\proxy.js`
 ```javascript
 initProxy = function initProxy (vm) {
-  if (hasProxy) {
+  if (hasProxy) { // const hasProxy = typeof Proxy !== 'undefined' && isNative(Proxy)
     // 依据对于ES6 Proxy的支持性判断是否使用proxy
     // determine which proxy handler to use
     const options = vm.$options
@@ -299,9 +307,9 @@ initProxy = function initProxy (vm) {
       ? getHandler
       : hasHandler // 如果options.render存在但是内部没有_withStripped, 那么使用hasHandler
     vm._renderProxy = new Proxy(vm, handlers)
-    // 支持proxy则实例化Proxy, 每次通过vm._renderProxy访问vm时，都必须经过这层代理
+    // 支持proxy则实例化Proxy, 包装一个对象作为_vm的_renderProxy属性值, 每次通过vm._renderProxy访问vm时，都必须经过这层代理
   } else {
-    vm._renderProxy = vm
+    vm._renderProxy = vm // 或者不支持Proxy的情况下直接将vm对象作为_renderProxy的属性值
   }
 }
 ```
@@ -309,13 +317,15 @@ initProxy = function initProxy (vm) {
 ---
 
 ## 3.3.1 hasHandler
+查看vm实例上是否具备某个属性
 `src\core\instance\proxy.js`
 
 ```javascript
   const hasHandler = {
     has (target, key) {
-      const has = key in target // vm中是否有key对应的属性, has为布尔值
+      const has = key in target // 判断该属性是否在vm实例上存在
       const isAllowed = allowedGlobals(key) ||
+      // 传一个属性名key和一堆字符串(用以生成特殊性属性名映射map), makeup会查找所列字符串中是否具备与该key对应者, 如果有则返回true
       (typeof key === 'string' && key.charAt(0) === '_' && !(key in target.$data))
       // 当key是全局变量或者key是私有属性且key没有在$data中，允许访问该key
       if (!has && !isAllowed) { // vm中没有key对应的属性, 或者没权限的情况下
@@ -327,6 +337,43 @@ initProxy = function initProxy (vm) {
     }
   }
 ```
+
+---
+
+## 3.3.2 allowedGlobals & makeMap
+看起来是个变量但传了值, `allowedGlobals`接收`makeMap`的值, 但`makeMap`函数本身返回一个函数类型值, 所以`allowedGlobals`可以接受传参
+
+`src\core\instance\proxy.js`多处皆存在该函数, 此为其一.
+```javascript
+const allowedGlobals = makeMap( // vue-2.6.13\packages\weex-vue-framework\factory.js
+  'Infinity,undefined,NaN,isFinite,isNaN,' +
+  'parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,' +
+  'Math,Number,Date,Array,Object,Boolean,String,RegExp,Map,Set,JSON,Intl,BigInt,' +
+  'require' // for Webpack/Browserify
+)
+```
+
+`makeMap`内写死了由诸多特殊属性名组合成的字符串, 用以拆分为数组后遍历添加属性生成特殊属性名映射表'map'.
+`makeMap`返回值作为函数类型将接收`allowedGlobals`传入的值作为参数以向同在`makeMap`作用域内的特殊属性名映射表`map`进行查找, 如果找到, 则makeMap返回的函数将还会返回这个属性在特殊属性值映表中对应的属性值, 此处所有特殊属性的值都是`true`, 即如果传入`allowedGlobals`中的值在`vm`特殊属性映射表中存在, `allowedGlobals`就返回true.
+```javascript
+function makeMap (
+  str,
+  expectsLowerCase
+) {
+  var map = Object.create(null); // 将一个以null为原型的空对象赋值到map
+  var list = str.split(','); // 将str以逗号分割拆分为数组(不是序列)赋值到list
+  for (var i = 0; i < list.length; i++) { // list内的每个元素作为map对象内的属性, 全部赋默认值为true, 这个true将会在allowedGlobals
+    map[list[i]] = true;
+  }
+  return expectsLowerCase  // 返回map对象中的一个属性值(如果传了expectsLowerCase就先将传入属性名转全小写再从map里查询值返回)
+    ? function (val) { return map[val.toLowerCase()]; }
+    : function (val) { return map[val]; }
+}
+```
+那么`vm._renderProxy`要么为
+
+---
+
 所以
 ```javascript
 vnode = render.call(vm._renderProxy, vm.$createElement)`
