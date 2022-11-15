@@ -316,8 +316,8 @@ initProxy = function initProxy (vm) {
 
 ---
 
-## 3.3.1 hasHandler
-查看vm实例上是否具备某个属性
+## 3.3.1 hasHandler && getHandler
+判定vm实例上是否具备某个属性.
 `src\core\instance\proxy.js`
 
 ```javascript
@@ -336,6 +336,19 @@ initProxy = function initProxy (vm) {
       return has || !isAllowed
     }
   }
+```
+
+针对 读取代理对象某个属性 的行为, 在开发者错误的读vm属性时发起提示.
+```javascript
+const getHandler = { // 针对 读取代理对象某个属性 的行为, 在开发者错误的读vm属性时，提供提示
+  get (target, key) {
+    if (typeof key === 'string' && !(key in target)) {
+      if (key in target.$data) warnReservedPrefix(target, key)
+      else warnNonPresent(target, key)
+    }
+    return target[key]
+  }
+}
 ```
 
 ---
@@ -370,7 +383,7 @@ function makeMap (
     : function (val) { return map[val]; }
 }
 ```
-那么`vm._renderProxy`要么为
+那么`vm._renderProxy`要么为`new Proxy(vm, handlers)`, `handlers`为`has`或`get`函数, 要么就是在不支持ES6 Proxy的环境下被直接赋值了`vm`.
 
 ---
 
