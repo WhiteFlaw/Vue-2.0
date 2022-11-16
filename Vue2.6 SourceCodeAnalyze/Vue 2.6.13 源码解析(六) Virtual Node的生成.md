@@ -174,6 +174,7 @@ export function createTextVNode (val: string | number) {
 ### 2.3.3 克隆节点?
 复制一个已经存在的节点, 在编译时起到优化作用.
 不过公司里的老前辈和我说过, 如果能够克隆节点的话尽量克隆, 克隆一个节点要比创建一个节省很多效能.
+
 ```javascript
 export function cloneVNode (vnode: VNode): VNode {
   const cloned = new VNode(
@@ -205,7 +206,9 @@ export function cloneVNode (vnode: VNode): VNode {
 ---
 
 # 三、创建Virtual Node
+
 ## 3.1 Vue.prototype._render
+
 ```javascript
 const vm = {
   $options: {
@@ -270,6 +273,7 @@ Vue.prototype._render = function (): VNode {
 
 ## 3.2  Vue.prototype._init
 `Vue.prototype._render`中
+
 ```javascript
 vnode = render.call(vm._renderProxy, vm.$createElement)
 ```
@@ -318,8 +322,8 @@ initProxy = function initProxy (vm) {
 
 ## 3.3.1 hasHandler && getHandler
 判定vm实例上是否具备某个属性.
-`src\core\instance\proxy.js`
 
+`src\core\instance\proxy.js`
 ```javascript
   const hasHandler = {
     has (target, key) {
@@ -368,6 +372,7 @@ const allowedGlobals = makeMap( // vue-2.6.13\packages\weex-vue-framework\factor
 
 `makeMap`内写死了由诸多特殊属性名组合成的字符串, 用以拆分为数组后遍历添加属性生成特殊属性名映射表'map'.
 `makeMap`返回值作为函数类型将接收`allowedGlobals`传入的值作为参数以向同在`makeMap`作用域内的特殊属性名映射表`map`进行查找, 如果找到, 则makeMap返回的函数将还会返回这个属性在特殊属性值映表中对应的属性值, 此处所有特殊属性的值都是`true`, 即如果传入`allowedGlobals`中的值在`vm`特殊属性映射表中存在, `allowedGlobals`就返回true.
+
 ```javascript
 function makeMap (
   str,
@@ -397,7 +402,10 @@ vnode = vm._renderProxy(vm.$createElement)
 ```
 向`getHandler`的`get`或`hasHandler`的`has`传参`vm.$createElement`
 
-## 3.4 createElement
+---
+
+## 3.4 createElement && _createElement
+其内部的`_createElement`函数会返回vnode实例, 该函数也基于`_createElement`封装, 目的是允许更加灵活的传参.
 `src\core\vdom\create-element.js`
 
 ```javascript
@@ -421,9 +429,15 @@ export function createElement (
 }
 ```
 
-### 3.4.1 _createElement
-`src\core\vdom\create-element.js`
+`context`表示`VNode`的上下文环境, 接受`Component`类型;
+`tag`表示标签, 类似`router-view`的`tag`参数, 可以是一个字符串, 也可以是一个 Component;
+`data`表示`VNode`的数据, `VNodeData`类型, 可以在`flow/vnode.js`中找到它的定义;
+`children`表示当前`VNode`的子节点, any类型, 需要接受`normalize`以规范为标准`VNode`一维数组；
 
+这个函数接收一个`tag`参数, 类似`router-view`的`tag`参数, 这个字符串规定生成何种DOM元素.
+这个函数十分复杂, 现在摘除与vnode生成操作不存在直接关联的部分, 那么所剩主要分为children规范化和虚拟节点生成两部分.
+
+`src\core\vdom\create-element.js`
 ```javascript
 export function _createElement (
   context: Component,
@@ -432,59 +446,26 @@ export function _createElement (
   children?: any,
   normalizationType?: number
 ): VNode | Array<VNode> {
-  if (isDef(data) && isDef((data: any).__ob__)) {
-    process.env.NODE_ENV !== 'production' && warn(
-      `Avoid using observed data object as vnode data: ${JSON.stringify(data)}\n` +
-      'Always create fresh vnode data objects in each render!',
-      context
-    )
-    return createEmptyVNode()
-  }
-  // object syntax in v-bind
-  if (isDef(data) && isDef(data.is)) {
-    tag = data.is
-  }
-  if (!tag) {
+  if (!tag) { // 若tag参数不存在, 则直接返回一个注释节点
     // in case of component :is set to falsy value
     return createEmptyVNode()
   }
-  // warn against non-primitive key
-  if (process.env.NODE_ENV !== 'production' &&
-    isDef(data) && isDef(data.key) && !isPrimitive(data.key)
-  ) {
-    if (!__WEEX__ || !('@binding' in data.key)) {
-      warn(
-        'Avoid using non-primitive value as key, ' +
-        'use string/number value instead.',
-        context
-      )
-    }
-  }
-  // support single function children as default scoped slot
-  if (Array.isArray(children) &&
-    typeof children[0] === 'function'
-  ) {
-    data = data || {}
-    data.scopedSlots = { default: children[0] }
-    children.length = 0
-  }
+  // 规范化children
+  // children接受any类型, 需要处理为vnode类型
+  // 成型的dom结构必然存在包含关系, 同dom树形结构, 一个节点与其内部存在的子节点也将构成树形结构, 现在需要将其处理为一维数组.
   if (normalizationType === ALWAYS_NORMALIZE) {
     children = normalizeChildren(children)
   } else if (normalizationType === SIMPLE_NORMALIZE) {
     children = simpleNormalizeChildren(children)
   }
+  
+  // vnode生成
   let vnode, ns
   if (typeof tag === 'string') {
+  
     let Ctor
     ns = (context.$vnode && context.$vnode.ns) || config.getTagNamespace(tag)
     if (config.isReservedTag(tag)) {
-      // platform built-in elements
-      if (process.env.NODE_ENV !== 'production' && isDef(data) && isDef(data.nativeOn) && data.tag !== 'component') {
-        warn(
-          `The .native modifier for v-on is only valid on components but it was used on <${tag}>.`,
-          context
-        )
-      }
       vnode = new VNode(
         config.parsePlatformTagName(tag), data, children,
         undefined, undefined, context
@@ -501,10 +482,12 @@ export function _createElement (
         undefined, undefined, context
       )
     }
+    
   } else {
     // direct component options / constructor
     vnode = createComponent(tag, data, context, children)
   }
+  
   if (Array.isArray(vnode)) {
     return vnode
   } else if (isDef(vnode)) {
@@ -517,4 +500,161 @@ export function _createElement (
 }
 ```
 
+---
+
+## 3.5 children 的规范化
+根据`normalizationType`的不同区分出`children`的两种处理方法.
+
+### 3.5.1 simpleNormalizeChildren
+
+```
+1. When the children contains components - because a functional component
+   may return an Array instead of a single root. In this case, just a simple
+   normalization is needed - if any child is an Array, we flatten the whole
+   thing with Array.prototype.concat. It is guaranteed to be only 1-level deep
+   because functional components already normalize their own children.
+```
+
+在`render`函数由编译生成的情况下调用, 理论上这种由编译生成的`children`应该是`VNode`类型, 除了`functional component`函数式组件, 它返回一个数组.
+这种情况下只要调用`simpleNormalizeChildren`即可, 通过`Array.prototype.concat`把`children`数组打为一维数组.
+
+```javascript
+export function simpleNormalizeChildren (children: any) {
+  for (let i = 0; i < children.length; i++) {
+    if (Array.isArray(children[i])) {
+      return Array.prototype.concat.apply([], children)
+    }
+  }
+  return children
+}
+```
+
+---
+
+### 3.5.2 normalizeChildren
+根据`normalizationType`的不同区分出`children`的两种处理方法之一.
+
+```
+2. When the children contains constructs that always generated nested Arrays,
+   e.g. <template>, <slot>, v-for, or when the children is provided by user
+   with hand-written render functions / JSX. In such cases a full normalization
+   is needed to cater to all possible types of children values.
+```
+
+当编译会产生嵌套数组时调用`normalizeArrayChildren`方法.
+比如编译`<template>`, `<slot>`, `v-for`, 或者用于生成`children`的函数是用户自己写的(比如手写`render`函数)这是两种会产生嵌套数组的情况. 
+这种情况下需要一套完整的normalize化流程来处理各种类型的`children`.
+
+不过嵌套数组并不由`normalizeChildren`处理, 此处只是对`children`只有一个节点并且属于基本类型的情况做了额外判定.
+`normalizeArrayChildren`将会在`children`为数组时受到调用以处理嵌套数组`children`.
+
+`src\core\vdom\helpers\normalize-children.js`
+```javascript
+export function normalizeChildren (children: any): ?Array<VNode> {
+  return isPrimitive(children)
+    ? [createTextVNode(children)]
+    // 当`children`只有一个节点并且属于基本类型时, Vue从接口层面允许用户把`children`写成基础类型用来创建单个文本节点
+    : Array.isArray(children) // 常规情况, 如果children不只有一个节点, 那么调用normalizeArrayChildren处理
+      ? normalizeArrayChildren(children)
+      : undefined
+}
+```
+
+### 3.5.3 normalizeArrayChildren
+`children`即需规范的`children`，对于多维数组的情况, 有`nestedIndex`表示多维数组子数组`child`的嵌套索引.
+反复遍历以层层获取到节点`c`, 对`c`进行判定以决定是否递归, 最终获取到单个节点`c`, 如果其为基础类型则交由`createTextVNode`转换成`VNode `类型, 非基础类型则判定为已经转化过或者原本就是`VNode`类型, 如果`children`是一个列表并且列表存在嵌套情况则根据`nestedIndex`更新它的 key. 
+在遍历的过程中，两个连续的`text`节点会被合并为一个`text`节点.
+
+```javascript
+function normalizeArrayChildren (children: any, nestedIndex?: string): Array<VNode> {
+  const res = []
+  let i, c, lastIndex, last
+  for (i = 0; i < children.length; i++) {
+    c = children[i]
+    if (isUndef(c) || typeof c === 'boolean') continue
+    lastIndex = res.length - 1
+    last = res[lastIndex]
+    //  nested
+    if (Array.isArray(c)) { // 递归判定
+    
+      if (c.length > 0) {
+        c = normalizeArrayChildren(c, `${nestedIndex || ''}_${i}`)
+        // merge adjacent text nodes
+        if (isTextNode(c[0]) && isTextNode(last)) { // 两个连续文本节点的合并
+          res[lastIndex] = createTextVNode(last.text + (c[0]: any).text)
+          c.shift()
+        }
+        res.push.apply(res, c)
+      }
+      
+    } else if (isPrimitive(c)) {
+    
+      if (isTextNode(last)) {
+        // merge adjacent text nodes
+        // this is necessary for SSR hydration because text nodes are
+        // essentially merged when rendered to HTML strings
+        res[lastIndex] = createTextVNode(last.text + c) // 两个连续文本节点的合并
+      } else if (c !== '') {
+        // convert primitive to vnode
+        res.push(createTextVNode(c))
+      }
+      
+    } else {
+    
+      if (isTextNode(c) && isTextNode(last)) { // 两个连续文本节点的合并
+        // merge adjacent text nodes
+        res[lastIndex] = createTextVNode(last.text + c.text)
+      } else {
+        // default key for nested array children (likely generated by v-for)
+        if (isTrue(children._isVList) &&
+          isDef(c.tag) &&
+          isUndef(c.key) &&
+          isDef(nestedIndex)) {
+          c.key = `__vlist${nestedIndex}_${i}__`
+        }
+        res.push(c)
+      }
+      
+    }
+  }
+  return res
+}
+```
+
+---
+
+## 3.6 VNode 的创建
+前提`tag`是 string 类型.
+并且`tag`是内置的节点, 则直接`new VNode`;
+如果`tag`为已注册的组件名, 则通过`createComponent`创建组件类型的`VNode`
+都不是就创建一个未知的标签`VNode`.
+
+```javascript
+// vnode生成
+let vnode, ns
+if (typeof tag === 'string') {
+  
+  let Ctor
+  if (config.isReservedTag(tag)) {
+    vnode = new VNode(
+      config.parsePlatformTagName(tag), data, children,
+      undefined, undefined, context
+    )
+  } else if ((!data || !data.pre) && isDef(Ctor = resolveAsset(context.$options, 'components', tag))) {
+    // component
+    vnode = createComponent(Ctor, data, context, children, tag)
+  } else {
+    // unknown or unlisted namespaced elements
+    // check at runtime because it may get assigned a namespace when its
+    // parent normalizes children
+    vnode = new VNode(
+      tag, data, children,
+      undefined, undefined, context
+    )
+  }
+
+}
+```
+
 # 总结
+-
