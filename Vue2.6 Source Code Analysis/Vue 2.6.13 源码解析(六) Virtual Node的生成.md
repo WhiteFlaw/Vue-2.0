@@ -3,7 +3,7 @@
 ---
 
 # 前言
-
+本系列最后一期, 短期内会修改但是不会续更, 学Web3去了, Vue我真的写吐了.
 
 ---
 
@@ -562,7 +562,11 @@ export function normalizeChildren (children: any): ?Array<VNode> {
 
 ### 3.5.3 normalizeArrayChildren
 `children`即需规范的`children`，对于多维数组的情况, 有`nestedIndex`表示多维数组子数组`child`的嵌套索引.
-反复遍历以层层获取到节点`c`, 对`c`进行判定以决定是否递归, 最终获取到单个节点`c`, 如果其为基础类型则交由`createTextVNode`转换成`VNode `类型, 非基础类型则判定为已经转化过或者原本就是`VNode`类型, 如果`children`是一个列表并且列表存在嵌套情况则根据`nestedIndex`更新它的 key. 
+
+反复遍历以层层获取到节点`c`, 对`c`进行判定以决定是否递归, 最终获取到单个节点`c`;
+如果`c`其为基础类型则交由`createTextVNode`转换成`VNode `类型, 非基础类型则判定为已经转化过或者原本就是`VNode`类型直接加入`res`.
+如果`children`是一个列表并且列表存在嵌套情况则根据`nestedIndex`更新`key`. 
+
 在遍历的过程中，两个连续的`text`节点会被合并为一个`text`节点.
 
 ```javascript
