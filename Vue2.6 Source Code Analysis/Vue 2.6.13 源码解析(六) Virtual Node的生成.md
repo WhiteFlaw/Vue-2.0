@@ -209,21 +209,6 @@ export function cloneVNode (vnode: VNode): VNode {
 
 ## 3.1 Vue.prototype._render
 
-```javascript
-const vm = {
-  $options: {
-    render: '1',
-    c: "3",
-    _parentVnode: 2,
-    d: ''
-  }
-}
-const { render, _parentVnode, somea } = vm.$options
-console.log(render) // 1
-console.log(_parentVnode) // 2
-console.log(somea) // undefined
-```
-
 `src/core/instance/render.js`
 
 ```javascript
@@ -267,6 +252,23 @@ Vue.prototype._render = function (): VNode {
   vnode.parent = _parentVnode // vnode父节点挂载到vnode, 返回vnode 
   return vnode
 }
+```
+
+`const { render, _parentVnode, somea } = vm.$options` 赋值方式试验.
+
+```javascript
+const vm = {
+  $options: {
+    render: '1',
+    c: "3",
+    _parentVnode: 2,
+    d: ''
+  }
+}
+const { render, _parentVnode, somea } = vm.$options
+console.log(render) // 1
+console.log(_parentVnode) // 2
+console.log(somea) // undefined
 ```
 
 ---
