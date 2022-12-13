@@ -1,0 +1,23 @@
+```javascript
+yearlyBillPrint(params, kjkm) { // 年明细账打印
+  EBEC051IYearlyPrintIs7(params).then((res) => {
+    res.info.voList.forEach((item) => {
+      item.drAmt === 0 && (item.drAmt = '')
+      item.crAmt === 0 && (item.crAmt = '')
+      item.yueAmt === 0 && (item.yueAmt = '')
+    })
+    this.yearlyPrintTableData = res.info.voList
+    this.$nextTick(() => {
+      const tableDom = document.getElementById(`Ebec051i-year-table-excel`)
+      downloadExcelByTable(tableDom, EBEC051I_YEARLY_EXCEL_SETTING)
+    })
+  })
+}
+```
+缺失`$nextTick`的情况下获取到yearlyPrintTableData填充后的DOM, tableDom不会有问题
+但是会导致downloadExcelByTable依然导出未更新的DOM, 始终慢最新的DOM一拍.
+
+---
+
+Vue 实现响应式并不是数据发生变化之后 DOM 立即变化, 而是按一定的策略进行 DOM 的更新。$nextTick 是在下次 DOM 更新循环结束之后执行延迟回调, 
+在修改数据之后使用 $nextTick，则可以在回调中获取更新后的 DOM
