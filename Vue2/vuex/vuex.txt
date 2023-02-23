@@ -1,0 +1,37 @@
+因为要在store里做axios请求, 并且把请求结果存储到state, 有异步操作, 所以需要使用Action
+那么有两种方法可以支持在create周期调用Actions函数, 鉴于mapActions是一种针对多个Actions分发操作的手段, 而且需要引入, 没必要
+所以选择了针对单个Action分发的dispatch()手法, 在create周期调用this.$store.dispatch("getList"); 
+
+那么剩下的问题, 就是用Actions调用mutations, 进而向state存储值;
+create周期调用getList后向json文件发起请求, 然后context.commit(initList, data)调用mutations函数initList, 传参data
+
+最后mutations函数initList将data赋值给state的list
+
+----------------------------------------------------------------------------------------------
+
+state实时存储输入框值
+输入框change事件监听函数, 每当输入框value发生变动就触发
+因为这不是一个异步操作, 所以直接使用mutations即可.
+
+事件处理函数内调用this.$store.commit('setInputValue', e.target.value)从事件对象里取出值传入mutations函数setInputValue内
+
+setInputValue接受state和val作为参数, 然后执行state.inputValue = val
+此时val就是e.target.value.
+这样state.inputValue即时跟随输入值发生变动
+
+------------------------------------------------------------------------------------------------
+
+存储的话基本就是:
+先看是不是异步操作, 不是就直接mutation, 是就先actions
+待会总结一下在组件调mutations, 调actions, states的方法
+和在actions调mutations的方法
+
+-----------------------------------------------------------------------------------------------
+
+点击添加输入框值
+点击提交触发addItemToList, 因为提交是异步操作, 所以直接使用actions, 那么单个actions使用dispatch进行, 此时state已经被映射为inutValue并绑定到输入框value, 所以直接this.inputValue可以拿到输入框值, trim()去掉头尾空格传入Actions函数addToJson: this.$store.dispatch("addToJson", this.inputValue.trim());
+之后就是Actions中的部分addToJson
+addToJson接收输入框值inputValue, 发送post请求
+
+
+

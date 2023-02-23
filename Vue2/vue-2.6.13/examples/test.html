@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app">
+        <!-- <h1>{{message}}</h1>
+        <div id="mount-point"></div> -->
+        <todo :todo-data="todoList"></todo>
+        <!-- <todo-item v-for="item in groceryList" :key="item.id" :todo="item"></todo-item> -->
+    </div>
+    <script src="../dist/vue.js"></script>
+    <script type="module">
+        var todoItem = Vue.extend({
+            template: `<li>{{ text }}</li>`,
+            props: ['text', 'color']
+        })
+
+        // 构建一个父组件
+        var todo = Vue.extend({
+            template: `
+              <ul>
+                 <todo-item v-for="(item, index) in todoData" :keys="index" v-text="item.text"></todo-item>
+              </ul>
+            `,
+            props: [
+                'todoData',
+                'todoList'
+            ],
+            // 局部注册子组件
+            components: {
+                //使用 components 定义组件时，若组件名称使用驼峰命名，则在引用组件时，需要把大写改为小写，并且用'-'将单词连接
+                todoItem: todoItem
+            }
+        })
+        // 注册到全局
+        Vue.component('todo', todo)
+
+        new Vue({
+            el: '#app',
+            data: {
+                todoList: [
+                    { id: 0, text: '工作' },
+                    { id: 1, text: '学习' },
+                    { id: 2, text: '休息' }
+                ]
+            },
+            methods: {
+                handleClick() {
+                    alert('HelloWorld');
+                }
+            }
+        })
+        /* Vue.component('todo-item', {
+            props: ['todo'],
+            template: '<li>{{ todo.text }}</li>'
+        });
+        Vue.component('todo-list', {
+            template: `<ul>啊<todo-list>
+                        </todo-list></ul>`
+        });
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                groceryList: [
+                    { id: 0, text: '蔬菜' },
+                    { id: 1, text: '奶酪' },
+                    { id: 2, text: '奶酪' },
+                    { id: 3, text: '奶酪' },
+                    { id: 4, text: '牛肉' }
+                ]
+            }
+        }); */
+
+        /*  var Profile = Vue.extend({
+             template: '<p>saysay{{ say }}</p>',
+             data: function () {
+                 return {
+                     say: "say"
+                 }
+             }
+         })
+         // 创建 Profile 实例，并挂载到一个元素上。
+         new Profile().$mount('#mount-point') */
+
+    </script>
+</body>
+
+</html>
